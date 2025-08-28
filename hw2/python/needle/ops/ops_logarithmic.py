@@ -18,7 +18,8 @@ class LogSoftmax(TensorOp):
     def gradient(self, out_grad, node):
         z = node.inputs[0]
         lse_out_grad = summation(out_grad, axes=(1,))
-        lse_grad = self.lse.op.gradient(lse_out_grad, z)
+        # todo
+        lse_grad = self.lse.op.gradient(lse_out_grad, self.lse)
         z_grad = out_grad
         return z_grad - lse_grad
 

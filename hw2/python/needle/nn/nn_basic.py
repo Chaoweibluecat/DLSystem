@@ -89,18 +89,28 @@ class Linear(Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = init.kaiming_uniform(self.in_features, self.out_features)
+        self.weight = Parameter(
+            init.kaiming_uniform(
+                self.in_features,
+                self.out_features,
+                device=device,
+                dtype=dtype,
+                requires_grad=True,
+            )
+        )
         if bias:
-            self.bias = ops.ops_mathematic.transpose(
-                init.kaiming_uniform(self.out_features, 1)
+            self.bias = Parameter(
+                init.kaiming_uniform(
+                    self.out_features, 1, device=device, dtype=dtype, requires_grad=True
+                ).transpose()
             )
         else:
             self.bias = None
 
     def forward(self, X: Tensor) -> Tensor:
-        h = ops.ops_mathematic.matmul(X, self.weight)
+        h = X.matmul(self.weight)
         if self.bias is not None:
-            h = h + ops.ops_mathematic.broadcast_to(self.bias, h.shape)
+            h = h + self.bias.broadcast_to(h.shape)
         return h
 
 
@@ -108,7 +118,8 @@ class Flatten(Module):
     def forward(self, X):
         shape = X.shape
         s = math.prod(shape[1:])
-        return ops.ops_mathematic.reshape(X, (shape[0], s))
+        # return ops.ops_mathematic.reshape(X, (shape[0], s))
+        return X.reshape((shape[0], s))
 
 
 class ReLU(Module):
@@ -133,14 +144,29 @@ class SoftmaxLoss(Module):
         # 需要用tensor操作保留计算图
         # require grad = False
         y_onehot = init.one_hot(logits.shape[dim], y, device=logits.device)
-        zy = ops.ops_mathematic.summation(y_onehot * logits, axes=(dim,))
-        loss = ops.ops_logarithmic.logsumexp(logits, axes=(dim,)) - zy
+        log_softmax = ops.ops_logarithmic.logsoftmax(logits)
+        ce = log_softmax * y_onehot
+        loss = -ops.ops_mathematic.summation(ce, axes=(dim,))
         # average through batch
         if dim == 1:
             size = logits.shape[0]
         else:
             size = math.prod(logits.shape[:dim])
         return ops.ops_mathematic.summation(loss) / size
+
+    # def forward(self, logits: Tensor, y: Tensor):
+    #     dim = len(logits.shape) - 1
+    #     # 需要用tensor操作保留计算图
+    #     # require grad = False
+    #     y_onehot = init.one_hot(logits.shape[dim], y, device=logits.device)
+    #     zy = ops.ops_mathematic.summation(y_onehot * logits, axes=(dim,))
+    #     loss = ops.ops_logarithmic.logsumexp(logits, axes=(dim,)) - zy
+    #     # average through batch
+    #     if dim == 1:
+    #         size = logits.shape[0]
+    #     else:
+    #         size = math.prod(logits.shape[:dim])
+    #     return ops.ops_mathematic.summation(loss) / size
 
 
 class BatchNorm1d(Module):
@@ -149,20 +175,53 @@ class BatchNorm1d(Module):
         self.dim = dim
         self.eps = eps
         self.momentum = momentum
-        self.e = init.zeros(dim, device=device, dtype=dtype, requires_grad=False)
-        self.var = init.zeros(dim, device=device, dtype=dtype, requires_grad=False)
-        self.weight = Parameter(init.ones(dim, device=device, dtype=dtype))
-        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype))
+        self.running_mean = init.zeros(
+            dim, device=device, dtype=dtype, requires_grad=False
+        )
+        self.running_var = init.ones(
+            dim, device=device, dtype=dtype, requires_grad=False
+        )
+        self.weight = Parameter(
+            init.ones(dim, device=device, dtype=dtype, requires_grad=True)
+        )
+        self.bias = Parameter(
+            init.zeros(dim, device=device, dtype=dtype, requires_grad=True)
+        )
 
     def forward(self, x: Tensor) -> Tensor:
         assert x.shape[1] == self.dim
+        weight_shape = [1] * len(x.shape)
+        weight_shape[1] = self.dim
         if not self.training:
-            
-        axes = list(range(2, len(x.shape)))
-        axes.insert(0, 0)
-        size = math.prod(x.shape[2::])
-        size *= x.shape[0]
-        e = ops.ops_mathematic.summation(x, axes=axes) / size
+            e = self.running_mean.reshape(weight_shape).broadcast_to(x.shape)
+            var = self.running_var.reshape(weight_shape).broadcast_to(x.shape)
+            std = (var + self.eps) ** 0.5
+            weight = self.weight.reshape(weight_shape).broadcast_to(x.shape)
+            bias = self.bias.reshape(weight_shape).broadcast_to(x.shape)
+            x = (x - e) / std * weight + bias
+            return x
+        else:
+            axes = list(range(2, len(x.shape)))
+            axes.insert(0, 0)
+            axes = tuple(axes)
+            size = math.prod(x.shape[2::])
+            size *= x.shape[0]
+            e = x.sum(axes=axes) / size
+            self.running_mean = (
+                1 - self.momentum
+            ) * self.running_mean + self.momentum * e
+            dim = [1] * len(x.shape)
+            dim[1] = x.shape[1]
+            avg_B = e.reshape(dim).broadcast_to(x.shape)
+            var = ((x - avg_B) ** 2).sum(axes=axes) / size
+            self.running_var = (
+                1 - self.momentum
+            ) * self.running_var + self.momentum * var
+            std = (var + self.eps) ** 0.5
+            weight = self.weight.reshape(dim).broadcast_to(x.shape)
+            bias = self.bias.reshape(dim).broadcast_to(x.shape)
+            x = ((x - avg_B) / std.reshape(dim).broadcast_to(x.shape)) * weight + bias
+            return x
 
 
 class LayerNorm1d(Module):
@@ -197,9 +256,17 @@ class Dropout(Module):
         self.p = p
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        if not self.training or self.p == 0:
+            return x
+
+        keep_prob = 1.0 - self.p
+        # 每个批次的dropOut的activation也是随机的
+        mask = init.rand(*x.shape, device=x.device)
+        # 如果随机数 < 保留概率，则 mask=1
+        # 惯例实现p = 0.2时, 保留0-0.8（而不是保留0.2-1)
+        mask = ops.ops_mathematic.less_than_scalar(mask, keep_prob)
+
+        return (mask * x) / keep_prob
 
 
 class Residual(Module):
@@ -208,6 +275,4 @@ class Residual(Module):
         self.fn = fn
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        return self.fn(x) + x

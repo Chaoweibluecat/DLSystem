@@ -402,7 +402,7 @@ def mlp_resnet_forward(dim, hidden_dim, num_blocks, num_classes, norm, drop_prob
 
 def train_epoch_1(hidden_dim, batch_size, optimizer, **kwargs):
     np.random.seed(1)
-    train_dataset = ndl.data.MNISTDataset(
+    train_dataset = ndl.data.MNIST(
         "./data/train-images-idx3-ubyte.gz", "./data/train-labels-idx1-ubyte.gz"
     )
     train_dataloader = ndl.data.DataLoader(dataset=train_dataset, batch_size=batch_size)
@@ -2176,6 +2176,7 @@ def test_optim_adam_weight_decay_bias_correction_1():
 # We're checking that you have not allocated too many tensors;
 # if this fails, make sure you're using .detach()/.data whenever possible.
 def test_optim_adam_z_memory_check_1():
+
     np.testing.assert_allclose(
         global_tensor_count(), np.array(1132), rtol=1e-5, atol=1000
     )

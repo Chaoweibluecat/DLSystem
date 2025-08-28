@@ -1,4 +1,5 @@
 """Optimization module"""
+
 import needle as ndl
 import numpy as np
 
@@ -24,9 +25,18 @@ class SGD(Optimizer):
         self.weight_decay = weight_decay
 
     def step(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        for i, param in enumerate(self.params):
+            param: ndl.Tensor = param
+            # 惯例做法,把weight decay加到梯度上, 并累计到momentum
+            grad = (param.grad + self.weight_decay * param).detach()
+            if not i in self.u:
+                self.u[i] = ((1 - self.momentum) * grad).detach()
+            else:
+                self.u[i] = (
+                    self.momentum * self.u[i] + (1 - self.momentum) * grad
+                ).detach()
+            p_new = param - self.lr * self.u[i]
+            param.data = p_new
 
     def clip_grad_norm(self, max_norm=0.25):
         """
@@ -57,8 +67,23 @@ class Adam(Optimizer):
 
         self.m = {}
         self.v = {}
+        self.u = {}
+        self.tt = []
 
     def step(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        # self.tt.append(np.array(ndl.autograd.TENSOR_COUNTER))
+        for i, param in enumerate(self.params):
+            grad = (param.grad + self.weight_decay * param).detach()
+            if not i in self.u:
+                self.u[i] = ((1 - self.beta1) * grad).detach()
+                self.v[i] = ((1 - self.beta2) * grad**2).detach()
+            else:
+                self.u[i] = (self.beta1 * self.u[i] + (1 - self.beta1) * grad).detach()
+                self.v[i] = (
+                    self.beta2 * self.v[i] + (1 - self.beta2) * grad**2
+                ).detach()
+            # 校正后到值仅用于本次梯度下降计算,重要！,如果校正后进u会直接爆炸
+            u_hat = self.u[i] / (1 - self.beta1**self.t)
+            v_hat = self.v[i] / (1 - self.beta2**self.t)
+            p_new = param - self.lr * u_hat / (v_hat**0.5 + self.eps)
+            param.data = p_new

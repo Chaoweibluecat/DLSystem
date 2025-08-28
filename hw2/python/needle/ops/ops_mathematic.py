@@ -304,11 +304,29 @@ class GreaterThanScalar(TensorOp):
         return (a > self.scalar).astype(a.dtype)
 
     def gradient(self, out_grad, node):
-        return array_api.zeros_like(node.inputs[0])
+        raise NotImplementedError()
 
 
 def greater_than_scalar(a, scalar):
     return GreaterThanScalar(scalar)(a)
+
+
+class LessThanScalar(TensorOp):
+    def __init__(self, scalar):
+        self.scalar = scalar
+
+    def compute(self, a: NDArray):
+        # 前向传播：执行比较，并将布尔结果转换为浮点数 (True->1.0, False->0.0)
+        return (a < self.scalar).astype(a.dtype)
+
+    def gradient(self, out_grad, node):
+        # 不可求导, 不应该被执行
+        raise NotImplementedError()
+        # return array_api.zeros_like(node.inputs[0])
+
+
+def less_than_scalar(a, scalar):
+    return LessThanScalar(scalar)(a)
 
 
 class ReLU(TensorOp):
