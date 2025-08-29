@@ -115,6 +115,8 @@ class EWiseDiv(TensorOp):
     """Op to element-wise divide two nodes."""
 
     def compute(self, a, b):
+        if (b == 0).any():
+            raise ValueError("divide by zero")
         return array_api.divide(a, b)
 
     def gradient(self, out_grad, node):
@@ -134,6 +136,8 @@ class DivScalar(TensorOp):
         self.scalar = scalar
 
     def compute(self, a):
+        if self.scalar == 0:
+            raise ValueError("divide by zero")
         return array_api.divide(a, self.scalar)
 
     def gradient(self, out_grad, node):

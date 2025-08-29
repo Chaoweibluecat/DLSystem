@@ -5,7 +5,7 @@ from ..data_basic import Dataset
 import numpy as np
 
 
-def parse_mnist(image_filename, label_filename):
+def parse_mnist(image_filename, label_filename, flatten=False):
     ### BEGIN YOUR CODE
     with gzip.open(image_filename, "rb") as f_images, gzip.open(
         label_filename, "rb"
@@ -18,8 +18,9 @@ def parse_mnist(image_filename, label_filename):
             f_images.read(num_images * num_rows * num_cols), dtype=np.uint8
         )
         # H * W * C
-        X = X.reshape(num_images, num_rows, num_cols, 1)
-
+        if not flatten:
+            X = X.reshape(num_images, num_rows, num_cols, 1)
+        # X = X.reshape(num_images, num_rows * num_cols)
         s = struct.Struct(">I I")
         values = s.unpack(f_labels.read(s.size))
         assert values[0] == 2049

@@ -72,6 +72,7 @@ class Adam(Optimizer):
 
     def step(self):
         # self.tt.append(np.array(ndl.autograd.TENSOR_COUNTER))
+        self.t += 1
         for i, param in enumerate(self.params):
             grad = (param.grad + self.weight_decay * param).detach()
             if not i in self.u:
@@ -82,7 +83,7 @@ class Adam(Optimizer):
                 self.v[i] = (
                     self.beta2 * self.v[i] + (1 - self.beta2) * grad**2
                 ).detach()
-            # 校正后到值仅用于本次梯度下降计算,重要！,如果校正后进u会直接爆炸
+            # 校正后的值仅用于本次梯度下降计算,重要！,如果校正后进u会直接爆炸
             u_hat = self.u[i] / (1 - self.beta1**self.t)
             v_hat = self.v[i] / (1 - self.beta2**self.t)
             p_new = param - self.lr * u_hat / (v_hat**0.5 + self.eps)
