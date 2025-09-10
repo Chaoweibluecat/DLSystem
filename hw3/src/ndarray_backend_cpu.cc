@@ -53,11 +53,6 @@ namespace needle
       }
     };
 
-    void test()
-    {
-      EwiseOp<add>(AlignedArray(10), AlignedArray(10), &AlignedArray(10));
-    }
-
     void Fill(AlignedArray *out, scalar_t val)
     {
       /**
