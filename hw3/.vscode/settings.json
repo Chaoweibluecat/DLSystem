@@ -1,0 +1,85 @@
+{
+
+    "C_Cpp.clang_tidy.enabled": true,
+    // 我们可以保留默认检查，然后在其基础上添加我们想要的
+    "C_Cpp.clang_tidy.checks.useDefaultChecks": true,
+    "C_Cpp.clang_tidy.checks.add": [
+        // 明确添加这个检查来捕获无限循环的 bug
+        "bugprone-infinite-loop",
+        // 这个检查也很有用，用于捕获有符号/无符号整数转换和比较问题
+        "misc-signed-unsigned-mismatch"
+    ],
+  // 告诉 C/C++ 扩展在分析时排除所有 .cu 文件
+    "C_Cpp.files.exclude": {
+        "**/*.cu": true
+    },
+        // ... 你已有的其他设置 ...
+    "cmake.configureArgs": [
+        "-DPYTHON_EXECUTABLE:FILEPATH=/opt/anaconda3/envs/triposr/bin/python",
+        "-Dpybind11_DIR=/opt/anaconda3/envs/triposr/lib/python3.9/site-packages/pybind11/share/cmake/pybind11",
+    ],
+  "files.associations": {
+    "__bit_reference": "cpp",
+    "__locale": "cpp",
+    "__verbose_abort": "cpp",
+    "array": "cpp",
+    "bitset": "cpp",
+    "cctype": "cpp",
+    "clocale": "cpp",
+    "cmath": "cpp",
+    "cstdarg": "cpp",
+    "cstddef": "cpp",
+    "cstdint": "cpp",
+    "cstdio": "cpp",
+    "cstdlib": "cpp",
+    "cstring": "cpp",
+    "ctime": "cpp",
+    "cwchar": "cpp",
+    "cwctype": "cpp",
+    "initializer_list": "cpp",
+    "ios": "cpp",
+    "iosfwd": "cpp",
+    "iostream": "cpp",
+    "istream": "cpp",
+    "limits": "cpp",
+    "locale": "cpp",
+    "mutex": "cpp",
+    "new": "cpp",
+    "optional": "cpp",
+    "print": "cpp",
+    "queue": "cpp",
+    "sstream": "cpp",
+    "stack": "cpp",
+    "stdexcept": "cpp",
+    "streambuf": "cpp",
+    "string": "cpp",
+    "string_view": "cpp",
+    "typeinfo": "cpp",
+    "variant": "cpp",
+    "deque": "cpp",
+    "execution": "cpp",
+    "ratio": "cpp",
+    "__hash_table": "cpp",
+    "__split_buffer": "cpp",
+    "unordered_map": "cpp",
+    "vector": "cpp",
+    "valarray": "cpp",
+    "algorithm": "cpp",
+    "__tree": "cpp",
+    "list": "cpp",
+    "map": "cpp",
+    "set": "cpp",
+    "span": "cpp",
+    "unordered_set": "cpp",
+    "__config": "cpp",
+    "__availability": "cpp",
+    "atomic": "cpp",
+    "format": "cpp"
+  },
+  "python.testing.pytestArgs": [
+    "."
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+
+  }
