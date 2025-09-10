@@ -68,10 +68,8 @@ class Adam(Optimizer):
         self.m = {}
         self.v = {}
         self.u = {}
-        self.tt = []
 
     def step(self):
-        # self.tt.append(np.array(ndl.autograd.TENSOR_COUNTER))
         self.t += 1
         for i, param in enumerate(self.params):
             grad = (param.grad + self.weight_decay * param).detach()
